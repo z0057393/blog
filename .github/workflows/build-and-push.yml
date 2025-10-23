@@ -1,35 +1,41 @@
 name: Build and push Docker image
 
+# Déclenche uniquement sur les tags commençant par "v"
 on:
   push:
-    # écoute tous les push (branches + tags). Tu peux restreindre si besoin.
-    branches: ["**"]
-    tags: ["v*"]
+    tags:
+      - "v*"
 
 env:
-  REGISTRY: ${{ secrets.SCW_REGISTRY }} # ex rg.fr-par.scw.cloud
+  REGISTRY: ${{ secrets.SCW_REGISTRY }}
   NAMESPACE: ${{ secrets.SCW_NAMESPACE }}
-  IMAGE_NAME: ${{ secrets.IMAGE_NAME || 'my-docs' }}
+  IMAGE_NAME: ${{ secrets.IMAGE_NAME || 'blog' }}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # important pour récupérer tous les tags
 
+      # 2️⃣ Node.js
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "18"
 
+      # 3️⃣ Install dependencies
       - name: Install deps
         run: npm ci
 
+      # 4️⃣ Build Docusaurus
       - name: Build Docusaurus
         run: npm run build
-        # make sure your package.json has "build": "docusaurus build"
 
+      # 5️⃣ Log in to Scaleway registry
       - name: Log in to Scaleway registry
         uses: docker/login-action@v3
         with:
@@ -37,51 +43,24 @@ jobs:
           username: nologin
           password: ${{ secrets.SCW_SECRET_KEY }}
 
-      - name: Compute image tags
-        id: tags
+      # 6️⃣ Set Docker image tag from Git tag
+      - name: Set Docker tag
         run: |
-          set -euo pipefail
-          REF="$GITHUB_REF"
-          # normalize ref to a name
-          if [[ "$REF" == refs/heads/* ]]; then
-            NAME="${REF#refs/heads/}"
-          elif [[ "$REF" == refs/tags/* ]]; then
-            NAME="${REF#refs/tags/}"
-          else
-            NAME="${REF}"
-          fi
-          BRANCH_SAFE=$(echo "$NAME" | tr '/' '-')
-          SHORT_SHA=${GITHUB_SHA::7}
-          IMAGE="${REGISTRY}/${NAMESPACE}/${IMAGE_NAME}"
-
-          # Compose newline-separated tags
-          TAGS="${IMAGE}:sha-${SHORT_SHA}\n${IMAGE}:branch-${BRANCH_SAFE}"
-
-          # if push is on main branch, add latest
-          if [[ "$REF" == "refs/heads/main" ]]; then
-            TAGS="${TAGS}\n${IMAGE}:latest"
-          fi
-
-          # if it's a git tag push (v1.2.3), add semver tag
-          if [[ "$REF" == refs/tags/* ]]; then
-            TAGS="${TAGS}\n${IMAGE}:${BRANCH_SAFE}"
-          fi
-
-          # export for next step (preserve newlines)
+          # GITHUB_REF example: refs/tags/v1.2.3
+          IMAGE_TAG=${GITHUB_REF#refs/tags/}  # => v1.2.3
+          IMAGE="${REGISTRY}/${NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}"
           echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
-          echo -e "IMAGE_TAGS<<EOF" >> $GITHUB_ENV
-          echo -e "$TAGS" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
 
+      # 7️⃣ Build & push Docker image
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ env.IMAGE_TAGS }}
+          tags: ${{ env.IMAGE }}
 
-      - name: Output pushed tags
+      # 8️⃣ Output pushed image
+      - name: Output pushed image
         run: |
-          echo "Pushed tags:"
-          echo "${IMAGE_TAGS}"
+          echo "Pushed image: ${{ env.IMAGE }}"

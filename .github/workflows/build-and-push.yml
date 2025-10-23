@@ -1,0 +1,87 @@
+name: Build and push Docker image
+
+on:
+  push:
+    # écoute tous les push (branches + tags). Tu peux restreindre si besoin.
+    branches: ["**"]
+    tags: ["v*"]
+
+env:
+  REGISTRY: ${{ secrets.SCW_REGISTRY }} # ex rg.fr-par.scw.cloud
+  NAMESPACE: ${{ secrets.SCW_NAMESPACE }}
+  IMAGE_NAME: ${{ secrets.IMAGE_NAME || 'my-docs' }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build Docusaurus
+        run: npm run build
+        # make sure your package.json has "build": "docusaurus build"
+
+      - name: Log in to Scaleway registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}
+          username: nologin
+          password: ${{ secrets.SCW_SECRET_KEY }}
+
+      - name: Compute image tags
+        id: tags
+        run: |
+          set -euo pipefail
+          REF="$GITHUB_REF"
+          # normalize ref to a name
+          if [[ "$REF" == refs/heads/* ]]; then
+            NAME="${REF#refs/heads/}"
+          elif [[ "$REF" == refs/tags/* ]]; then
+            NAME="${REF#refs/tags/}"
+          else
+            NAME="${REF}"
+          fi
+          BRANCH_SAFE=$(echo "$NAME" | tr '/' '-')
+          SHORT_SHA=${GITHUB_SHA::7}
+          IMAGE="${REGISTRY}/${NAMESPACE}/${IMAGE_NAME}"
+
+          # Compose newline-separated tags
+          TAGS="${IMAGE}:sha-${SHORT_SHA}\n${IMAGE}:branch-${BRANCH_SAFE}"
+
+          # if push is on main branch, add latest
+          if [[ "$REF" == "refs/heads/main" ]]; then
+            TAGS="${TAGS}\n${IMAGE}:latest"
+          fi
+
+          # if it's a git tag push (v1.2.3), add semver tag
+          if [[ "$REF" == refs/tags/* ]]; then
+            TAGS="${TAGS}\n${IMAGE}:${BRANCH_SAFE}"
+          fi
+
+          # export for next step (preserve newlines)
+          echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
+          echo -e "IMAGE_TAGS<<EOF" >> $GITHUB_ENV
+          echo -e "$TAGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_TAGS }}
+
+      - name: Output pushed tags
+        run: |
+          echo "Pushed tags:"
+          echo "${IMAGE_TAGS}"

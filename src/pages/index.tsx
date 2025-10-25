@@ -6,12 +6,21 @@ import Layout from "@theme/Layout";
 import HomepageFeatures from "@site/src/components/HomepageFeatures";
 import Heading from "@theme/Heading";
 
+import { useColorMode } from "@docusaurus/theme-common";
+
 import styles from "./index.module.css";
 
 function HomepageHeader() {
   const { siteConfig } = useDocusaurusContext();
+  const { colorMode, setColorMode } = useColorMode();
+  const bgColor = colorMode === "dark" ? "#1B1B1D" : "#FFFFFF";
+  const textColor = colorMode === "dark" ? "#fff" : "#007398";
+
   return (
-    <header className={clsx("hero hero--primary", styles.heroBanner)}>
+    <header
+      className={clsx("hero hero--primary", styles.heroBanner)}
+      style={{ backgroundColor: bgColor, color: textColor }}
+    >
       <div className="container">
         <div id="logo">
           <img src="img/logo-gb.jpg"></img>

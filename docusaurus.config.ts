@@ -8,7 +8,7 @@ const config: Config = {
   },
   themes: ["@docusaurus/theme-mermaid"],
   title: "Accueil",
-  tagline: "Actually, just a chill guy programming",
+  tagline: "Just a chill programmer",
   favicon: "img/favicon.ico",
 
   future: {

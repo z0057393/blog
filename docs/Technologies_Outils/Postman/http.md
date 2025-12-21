@@ -1,8 +1,7 @@
 ---
-
 sidebar_label: Use with HTTP
 sidebar_position: 1
--------------------
+---
 
 # 🌐 Comment utiliser **Postman pour faire des requêtes HTTP (API REST)**
 
@@ -10,10 +9,10 @@ sidebar_position: 1
 
 Ce guide explique comment **tester et consommer une API HTTP/REST avec Postman**, sans client applicatif, afin de :
 
-* valider le fonctionnement d’une API backend,
-* tester les routes (GET, POST, PUT, DELETE),
-* envoyer des paramètres, headers et payloads,
-* analyser les réponses HTTP.
+- valider le fonctionnement d’une API backend,
+- tester les routes (GET, POST, PUT, DELETE),
+- envoyer des paramètres, headers et payloads,
+- analyser les réponses HTTP.
 
 Ce type de test est indispensable lors du développement ou du débogage d’une API.
 

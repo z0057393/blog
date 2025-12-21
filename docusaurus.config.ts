@@ -23,6 +23,15 @@ const config: Config = {
     defaultLocale: "fr",
     locales: ["fr"],
   },
+  plugins: [
+    [
+      "@docusaurus/plugin-google-gtag",
+      {
+        trackingID: "G-N99CNCQY0H", // Remplace par ton ID GA4
+        anonymizeIP: true,
+      },
+    ],
+  ],
   presets: [
     [
       "classic",

@@ -1,67 +1,190 @@
-# OVH - Se connecter en ssh à son VPS
+# OVHcloud — Se connecter en SSH à son VPS
 
-![](https://www.corinnelegras.fr/wp-content/uploads/elementor/thumbs/logo-OVH-cloud-p42b8ddp4t25cg9eys9xrv5gefw3vog8vximej090g.png)
+Ce guide explique **pas à pas** comment se connecter de manière sécurisée à un **VPS OVHcloud via SSH**, en utilisant une **clé SSH** plutôt qu’un mot de passe.
 
-## Pré-requis
+---
 
-Avoir un VPS
+## 🧰 Pré-requis
 
-## Générer une clef ssh
+Avant de commencer, assurez-vous d’avoir :
 
-Deux algorithmes sont couramment utilisés pour générer des clés d’authentification :
+| Élément                   | Description                      |
+| ------------------------- | -------------------------------- |
+| VPS OVHcloud              | VPS actif et accessible          |
+| Accès root ou utilisateur | Droits SSH                       |
+| Terminal                  | Linux / macOS / WSL recommandé   |
+| OpenSSH                   | Généralement installé par défaut |
 
-- **RSA** – Une clé RSA SSH est considérée comme
-  hautement sécurisée car elle a généralement une taille de clé plus
-  importante, souvent 2048 ou 4096 bits. Elle est également plus
-  compatible avec les anciens systèmes d’exploitation.
-- **Ed25519** – Un algorithme plus moderne avec une
-  taille de clé standard plus petite de 256 bits. Il est tout aussi sûr et efficace qu’une clé RSA en raison de ses fortes propriétés
-  cryptographiques. La compatibilité est plus faible, mais les systèmes
-  d’exploitation les plus récents le prennent en charge.
+ℹ️ Ce guide est valable pour **Linux / macOS / Windows (WSL)**.
 
-Dans notre cas, nous allons utiliser l’algorithme RSA.
+---
 
-Pour générer notre clef, nous allons utiliser la commande
+## 🧪 Comprendre les clés SSH
 
-```jsx
-ssh-keygen -t rsa
+Les clés SSH fonctionnent par **paire cryptographique** :
+
+| Type         | Rôle                     |
+| ------------ | ------------------------ |
+| Clé privée   | Reste sur votre machine  |
+| Clé publique | Installée sur le serveur |
+
+La connexion est autorisée **uniquement si les deux correspondent**.
+
+---
+
+## 🧬 Algorithmes de clés SSH
+
+Deux algorithmes sont couramment utilisés :
+
+| Algorithme | Sécurité    | Compatibilité | Recommandation        |
+| ---------- | ----------- | ------------- | --------------------- |
+| RSA        | Très élevée | Excellente    | ✔️ Compatible partout |
+| Ed25519    | Très élevée | Plus récente  | ⚡ Plus rapide        |
+
+📝 **Choix du guide** : RSA (meilleure compatibilité).
+
+---
+
+## 🛠️ Générer une clé SSH
+
+### 📍 Commande de génération
+
+```bash
+ssh-keygen -t rsa -b 4096
 ```
 
-| Nom    | Argument | Description                                                                                                                           |
-| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Type   | -t       | Permet de choisir l’algorothme que l’on veut utiliser                                                                                 |
-| Taille | -b       | \*\*Pour RSA seulement, ed25519 a une taille fixe, il permet de définir la taille de notre clef entre 2048 et 4096, par défaut : 2048 |
+### 🧩 Détails des paramètres
 
-La clef est sauvegardé dans le dossier :
+| Argument | Description                       |
+| -------- | --------------------------------- |
+| `-t`     | Type d’algorithme                 |
+| `-b`     | Taille de la clé (RSA uniquement) |
+| 4096     | Sécurité maximale recommandée     |
 
-```jsx
-cd ~/.ssh
+ℹ️ Appuyez sur **Entrée** pour accepter le chemin par défaut.
+
+---
+
+## 📂 Emplacement des clés
+
+Les clés sont stockées dans :
+
+```bash
+~/.ssh/
 ```
 
-On a donc la clef privé et public.
+| Fichier      | Description                        |
+| ------------ | ---------------------------------- |
+| `id_rsa`     | Clé privée (⚠️ ne jamais partager) |
+| `id_rsa.pub` | Clé publique                       |
 
-## Mettre notre clef public sur le VPS
+---
 
-```jsx
+## 📤 Copier la clé publique
+
+Affichez la clé publique :
+
+```bash
 cat ~/.ssh/id_rsa.pub
 ```
 
-Copier le résultat.
+📋 Copiez **l’intégralité** du contenu affiché.
 
-Connecter vous sur votre VPS
+---
 
-```jsx
-ssh user@host
+## 🌐 Connexion initiale au VPS
+
+Connectez-vous avec mot de passe (une dernière fois) :
+
+```bash
+ssh user@IP_DU_VPS
 ```
 
-Saisissez le mot de passe
+📝 Exemple :
 
-Une fois connecté sur le VPS
-
-```jsx
-vi.ssh / authorized_keys;
+```bash
+ssh ubuntu@51.xxx.xxx.xxx
 ```
 
-Coller votre clef ssh dans le fichier authorized_keys
+---
 
-Votre clef ssh est maintenant prise en compte par votre VPS
+## 🗝️ Installer la clé sur le VPS
+
+### 📁 Créer le dossier SSH (si nécessaire)
+
+```bash
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+```
+
+### ✍️ Ajouter la clé publique
+
+```bash
+nano ~/.ssh/authorized_keys
+```
+
+Collez votre clé publique, puis sauvegardez.
+
+### 🔒 Sécuriser les permissions
+
+```bash
+chmod 600 ~/.ssh/authorized_keys
+```
+
+---
+
+## 🔑 Connexion SSH avec clé
+
+Déconnectez-vous, puis reconnectez-vous :
+
+```bash
+ssh user@IP_DU_VPS
+```
+
+🎉 **Aucun mot de passe ne sera demandé**.
+
+---
+
+## ⚡ Astuce — Connexion simplifiée
+
+Ajoutez une configuration locale :
+
+```bash
+nano ~/.ssh/config
+```
+
+```ini
+Host ovh-vps
+  HostName 51.xxx.xxx.xxx
+  User ubuntu
+  IdentityFile ~/.ssh/id_rsa
+```
+
+Connexion rapide :
+
+```bash
+ssh ovh-vps
+```
+
+---
+
+## 🧯 Problèmes fréquents / Causes probables
+
+| Problème              | Cause probable      | Solution                   |
+| --------------------- | ------------------- | -------------------------- |
+| Permission denied     | Droits incorrects   | Vérifier chmod             |
+| Clé ignorée           | Mauvais utilisateur | Vérifier `user@host`       |
+| Toujours mot de passe | Mauvaise clé        | Vérifier `authorized_keys` |
+| Connexion refusée     | SSH désactivé       | Vérifier `sshd`            |
+| Timeout               | Firewall            | Vérifier ports             |
+
+---
+
+## 🛡️ Bonnes pratiques de sécurité
+
+- Désactiver l’authentification par mot de passe
+- Utiliser une clé par machine
+- Sauvegarder la clé privée
+- Protéger la clé avec une passphrase
+
+ℹ️ Pour aller plus loin : modifier `/etc/ssh/sshd_config`.
